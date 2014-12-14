@@ -1,6 +1,8 @@
+require( 'tmysql4' );
+
 pmysql = { };
 
-require( 'tmysql4' );
+local db_cache = {}
 
 local db_mt = { };
 db_mt.__index = db_mt;
@@ -9,17 +11,24 @@ local function print( ... )
   return MsgC(Color(0,255,0), '[MYSQL] ', Color(255,255,255), ... .. '\n')
 end
 
-function pmysql.newdb( ... )
-  local obj = {};
+function pmysql.newdb( HOSTNAME, USERNAME, PASSWORD, DATABASE, PORT, OPTIONAL_UNIX_SOCKET_PATH )
+  local obj = { };
   setmetatable( obj, db_mt );
   
-  local db = tmysql.initialize( ... );
-  obj.db = db
+  obj.hash = string.format( '%s:%s@%X:%s', HOSTNAME, PORT, util.CRC( USERNAME .. '-' .. PASSWORD ), DATABASE );
 
+  if db_cache[ obj.hash ] then
+    obj.db = db_cache[ obj.hash ];
+    return print( 'Recycled database connection with hashid: ' .. obj.hash );
+  end
+
+  obj.db = tmysql.initialize( HOSTNAME, USERNAME, PASSWORD, DATABASE, PORT, OPTIONAL_UNIX_SOCKET_PATH );
+  
   if obj.db then 
-    print( 'Connected successfully.' );
+    print( 'Connected to database ' .. DATABASE .. ':' .. PORT .. ' successfully.' );
   else
-    print( 'Connection failed.' );
+    print( 'Connection to database ' .. DATABASE .. ':' .. PORT .. ' failed.' );
+    return
   end
 
   return obj;
@@ -29,7 +38,7 @@ function db_mt:query( sqlstr, cback )
   return self.db:Query( sqlstr, function( data, status, err )
     if status then
       if cback then cback( data ); end
-    else
+    elseif err then
       print( err );
     end
   end, QUERY_FLAG_ASSOC );
