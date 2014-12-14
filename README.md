@@ -4,9 +4,21 @@ To use place in: lua/includes/modules
 
 Examle usage:
 
-	require( 'pmysql' )
+require( 'pmysql' )
 
 	db = db or pmysql.newdb( HOSTNAME, USERNAME, PASSWORD, DATABASE, PORT, OPTIONAL_UNIX_SOCKET_PATH ) - Connect
+
+	pmysql.getTable( ) - Returns a table of all active databases
+
+	pmysql.pollAll( ) - Polls all databases
+
+	db:escape( str )
+
+	db:poll( )
+
+	db:setCharset( charset )
+
+	db:disconnect( )
 
 	db:query( 'SELECT * FROM example', function( data ) - Normal query
 	  PrintTable ( data )
