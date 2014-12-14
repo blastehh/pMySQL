@@ -1,6 +1,10 @@
 This is a simple wrapper for tmysql, originally made by thelastpenguin, updated by me (aStonedPenguin) so we could replace mysqloo with tmysql on our servers.
 
+To use place in: lua/includes/modules
+
 Examle usage:
+
+	require( 'pmysql' )
 
 	db = db or pmysql.newdb( HOSTNAME, USERNAME, PASSWORD, DATABASE, PORT, OPTIONAL_UNIX_SOCKET_PATH ) - Connect
 
