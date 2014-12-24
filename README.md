@@ -4,7 +4,7 @@ To use place in: lua/includes/modules
 
 Examle usage:
 
-require( 'pmysql' )
+	require( 'pmysql' )
 
 	db = db or pmysql.connect( hostname, username, password, database, port, optional_unix_socket_path ) - Connect
 
