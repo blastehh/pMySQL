@@ -20,7 +20,9 @@ require( 'pmysql' )
 
 	pmysql.enableLog( true or false ) - Enable/Disable logging. Default: true
 
-	pmysql.setMaxErrors( num ) - Enable/Disable logging. Default: unlimited
+	pmysql.setMaxErrors( num ) - Max errors before a query is dropped. Default: Unlimited
+
+	pmysql.setTimeOut( time ) - How long before a sync query times out and gets dropped. Default: 0.3
 
 	db:escape( str )
 
@@ -33,11 +35,3 @@ require( 'pmysql' )
 	db:query( 'SELECT * FROM example', function( data ) - Normal query
 	  PrintTable ( data )
 	end )
-
-	db:query_ex( 'SELECT * FROM example WHERE example=?', { player:SteamID() }, function( data ) - Escape all values
-	  PrintTable ( data )
-	end )
-
-	- Synchronous query_ex, much like calling query:wait() in mysqloo. Timeout is optional and query will return nil on timeout.
-	local data = db:query_sync( 'SELECT * FROM example WHERE example=?', { player:SteamID() }, timeout ) 
-	PrintTable( data )
