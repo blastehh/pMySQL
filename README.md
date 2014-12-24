@@ -35,3 +35,11 @@ require( 'pmysql' )
 	db:query( 'SELECT * FROM example', function( data ) - Normal query
 	  PrintTable ( data )
 	end )
+
+	db:query_ex( 'SELECT * FROM example WHERE example=?', { player:SteamID() }, function( data ) - Escape all values
+	  PrintTable ( data )
+	end )
+
+	- Synchronous query_ex, much like calling query:wait() in mysqloo. Timeout is optional and will use default otherwise. Query will return nil upon timeout.
+	local data = db:query_sync( 'SELECT * FROM example WHERE example=?', { player:SteamID() }, timeout ) 
+	PrintTable( data )
