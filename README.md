@@ -6,11 +6,21 @@ Examle usage:
 
 require( 'pmysql' )
 
-	db = db or pmysql.newdb( HOSTNAME, USERNAME, PASSWORD, DATABASE, PORT, OPTIONAL_UNIX_SOCKET_PATH ) - Connect
+	db = db or pmysql.connect( hostname, username, password, database, port, optional_unix_socket_path ) - Connect
+
+	pmysql.newdb - Same thing as pmysql.connect
 
 	pmysql.getTable( ) - Returns a table of all active databases
 
 	pmysql.pollAll( ) - Polls all databases
+
+	pmysql.print( ... ) - Fancy prefixed MsgC
+
+	pmysql.log( str ) - Logs to pmysql_logs.txt and calls pmysql.print
+
+	pmysql.enableLog( true or false ) - Enable/Disable logging. Default: true
+
+	pmysql.setMaxErrors( num ) - Enable/Disable logging. Default: unlimited
 
 	db:escape( str )
 
@@ -28,5 +38,6 @@ require( 'pmysql' )
 	  PrintTable ( data )
 	end )
 
-	local data = db:query_sync( 'SELECT * FROM example WHERE example=?', { player:SteamID() } ) - Synchronous query_ex, much like calling query:wait() in mysqloo
+	- Synchronous query_ex, much like calling query:wait() in mysqloo. Timeout is optional and query will return nil on timeout.
+	local data = db:query_sync( 'SELECT * FROM example WHERE example=?', { player:SteamID() }, timeout ) 
 	PrintTable( data )
