@@ -130,7 +130,7 @@ function db_mt:query_sync( sqlstr, options, timeout )
     time = 0;
   end );
 
-  while ( not done ) or ( time > SysTime() ) do
+  while ( not done ) and ( time > SysTime() ) do
     self:poll( );
   end
 
