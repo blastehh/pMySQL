@@ -99,7 +99,7 @@ function db_mt:query( sqlstr, cback )
     elseif err then
       pmysql.log( obj.database .. '-' .. obj.port .. ' - ' .. err );
       if ( max_errors ~= nil ) and ( query_cache[ sqlstr ] ~= nil ) and ( query_cache[ sqlstr ].errcount < max_errors ) then
-        query_cache[ sqlstr ] = { obj = self._db, cback = cback, errcount = 1 };
+        query_cache[ sqlstr ] = { obj = self, cback = cback, errcount = 1 };
       elseif ( query_cache[ sqlstr ] ~= nil ) then
         pmysql.log( 'ERROR: Query timeout - ' .. sqlstr );
         query_cache[ sqlstr ] = nil;
