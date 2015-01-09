@@ -13,7 +13,7 @@ local db_mt           = { };
 db_mt.__index         = db_mt;
 
 function pmysql.print( ... )
-  return MsgC( Color( 225, 0, 0 ), '[MYSQL] ', Color( 255, 255, 255 ), ... .. '\n' )
+  return MsgC( Color( 225, 0, 0 ), '[MYSQL] ', Color( 255, 255, 255 ), ... .. '\n' );
 end
 
 function pmysql.log( str )
@@ -76,7 +76,7 @@ function pmysql.enableLog( bool )
 end
 
 function db_mt:escape( str )
-  return tmysql.escape( tostring( str ) );
+  return self._db:Escape( tostring( str ) );
 end
 
 function db_mt:poll( )
@@ -93,17 +93,17 @@ function db_mt:disconnect( )
 end
 
 function db_mt:query( sqlstr, cback )
-  return self._db:Query( sqlstr, function( data, status, err )
-    if status then
-      if cback then cback( data ); end
-    elseif err then
-      pmysql.log( obj.database .. '-' .. obj.port .. ' - ' .. err );
-      if ( max_errors ~= nil ) and ( query_cache[ sqlstr ] ~= nil ) and ( query_cache[ sqlstr ].errcount < max_errors ) then
-        query_cache[ sqlstr ] = { obj = self, cback = cback, errcount = 1 };
-      elseif ( query_cache[ sqlstr ] ~= nil ) then
+  return self._db:Query( sqlstr, function( results )
+    if results[1].error then
+      pmysql.log( self.database .. ':' .. self.port .. ' - ' .. results[1].error );
+      if ( query_cache[ sqlstr ] == nil ) or ( max_errors ~= nil ) and ( query_cache[ sqlstr ].errcount < max_errors ) then
+        query_cache[ sqlstr ] = { obj = self, cback = cback };
+      elseif ( query_cache[ sqlstr ] ~= nil ) and ( max_errors ~= nil ) then
         pmysql.log( 'ERROR: Query timeout - ' .. sqlstr );
         query_cache[ sqlstr ] = nil;
       end
+    else
+      if cback then cback( results[1].data ); end
     end
   end, QUERY_FLAG_ASSOC );
 end
@@ -141,7 +141,7 @@ hook.Add('Tick', 'TMysqlPoll', function()
   pmysql.pollAll( )
 
   for k, v in pairs( query_cache ) do
-    v.errcount = v.errcount + 1;
+    v.errcount = ( v.errcount ~= nil ) and ( v.errcount + 1 ) or 1;
     v.obj:query( k, v.cback );
   end
 end );
