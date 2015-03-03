@@ -1,16 +1,23 @@
+local tostring 			= tostring;
+local pairs 			= pairs;
+local ipairs 			= ipairs;
+local string 			= string;
+local unpack 			= unpack;
+local SysTime 			= SysTime;
+
 require( 'tmysql4' );
 
-pmysql                = { };
+pmysql                	= { };
 
-local db_cache        = { };
-local query_cache     = { };
-local sync_timeout    = 0.3;
-local logging_enabled = true;
-local log_file        = 'pmysql_log.txt';
-local max_errors;
+local db_cache        	= { };
+local query_cache     	= { };
+local sync_timeout    	= 0.3;
+local logging_enabled 	= true;
+local log_file        	= 'pmysql_log.txt';
+local max_errors		= 10;
 
-local db_mt           = { };
-db_mt.__index         = db_mt;
+local db_mt           	= { };
+db_mt.__index         	= db_mt;
 
 function pmysql.print( ... )
   return MsgC( Color( 225, 0, 0 ), '[MYSQL] ', Color( 255, 255, 255 ), ... .. '\n' );
@@ -96,11 +103,13 @@ function db_mt:query( sqlstr, cback )
   return self._db:Query( sqlstr, function( results )
     if results[1].error then
       pmysql.log( self.database .. ':' .. self.port .. ' - ' .. results[1].error );
-      if ( query_cache[ sqlstr ] == nil ) or ( max_errors ~= nil ) and ( query_cache[ sqlstr ].errcount < max_errors ) then
+      if ( query_cache[ sqlstr ] == nil ) then
         query_cache[ sqlstr ] = { obj = self, cback = cback };
-      elseif ( query_cache[ sqlstr ] ~= nil ) and ( max_errors ~= nil ) then
+      elseif ( max_errors ~= nil ) and ( query_cache[ sqlstr ] ~= nil ) and ( query_cache[ sqlstr ].errcount >= max_errors ) then
         pmysql.log( 'ERROR: Query timeout - ' .. sqlstr );
         query_cache[ sqlstr ] = nil;
+      elseif ( query_cache[ sqlstr ] ~= nil ) then
+      	query_cache[ sqlstr ].retry = true;
       end
     else
       if cback then cback( results[1].data ); end
@@ -137,11 +146,12 @@ function db_mt:query_sync( sqlstr, options, timeout )
   return _data;
 end
 
-hook.Add('Tick', 'TMysqlPoll', function()
-  pmysql.pollAll( )
-
+hook.Add('Tick', 'pmysql.Poll', function()
   for k, v in pairs( query_cache ) do
-    v.errcount = ( v.errcount ~= nil ) and ( v.errcount + 1 ) or 1;
-    v.obj:query( k, v.cback );
+  	if ( v.retry ~= false ) then
+	    v.errcount = ( v.errcount ~= nil ) and ( v.errcount + 1 ) or 2;
+	    v.retry = false;
+	    v.obj:query( k, v.cback );
+	end
   end
 end );
