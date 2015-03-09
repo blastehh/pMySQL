@@ -36,7 +36,7 @@ function pmysql.connect( hostname, username, password, database, port, optional_
   obj.hash            = string.format( '%s:%s@%X:%s', hostname, port, util.CRC( username .. '-' .. password ), database );
 
   if db_cache[ obj.hash ] then
-    pmysql.log( 'Recycled database connection : ' .. obj.database .. '-' .. obj.port );
+    pmysql.log( 'Recycled database connection : ' .. database .. '-' .. port );
     return db_cache[ obj.hash ]._db
   end
 
