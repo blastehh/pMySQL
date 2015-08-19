@@ -1,4 +1,4 @@
-This repo has moved to: This repo has moved to: https://github.com/SuperiorServers/plib_v2/blob/master/lua/includes/modules/ptmysql.lua
+This repo has moved to: This repo has moved to: https://github.com/SuperiorServers/plib_v2
 
 
 This is a simple wrapper for tmysql, originally made by thelastpenguin, updated by me (aStonedPenguin) so we could replace mysqloo with tmysql on our servers.
