@@ -30,33 +30,34 @@ function pmysql.log( str )
 end
 
 function pmysql.connect( hostname, username, password, database, port, optional_unix_socket_path )
-  local obj = { };
-  setmetatable( obj, db_mt );
+	local obj = { };
+	setmetatable( obj, db_mt );
   
-  obj.hash            = string.format( '%s:%s@%X:%s', hostname, port, util.CRC( username .. '-' .. password ), database );
+	obj.hash = debug.getinfo(2).short_src
 
-  if db_cache[ obj.hash ] then
-    pmysql.log( 'Recycled database connection : ' .. database .. '-' .. port );
-    return db_cache[ obj.hash ]._db
-  end
+	if db_cache[ obj.hash ] then
+		pmysql.log( 'Recreating database connection : '.. username .. ':' .. database .. '@' .. hostname .. ':' .. port );
+		db_cache[ obj.hash ]._db:Disconnect( )
+		db_cache[ obj.hash ] = nil
+	end
 
-  obj._db, obj.err   = tmysql.initialize( hostname, username, password, database, port, optional_unix_socket_path );
-  obj.hostname       = hostname;
-  obj.username       = username;
-  obj.password       = password;
-  obj.database       = database;
-  obj.port           = port;
+	obj._db, obj.err   = tmysql.initialize( hostname, username, password, database, port, optional_unix_socket_path );
+	obj.hostname       = hostname;
+	obj.username       = username;
+	obj.password       = password;
+	obj.database       = database;
+	obj.port           = port;
 
-  if obj._db then 
-    pmysql.log( 'Connected to database ' .. database .. ':' .. port .. ' successfully.' );
-  elseif obj.err then
-    pmysql.log( 'Connection to database ' .. database .. ':' .. port .. ' failed. ERROR: ' .. obj.err );
-    return
-  end
+	if obj._db then 
+		pmysql.log( 'Connected '.. username .. ':' .. database .. '@' .. hostname .. ':' .. port .. ' successfully.' );
+	elseif obj.err then
+		pmysql.log( 'Connection ' .. username .. ':' .. database .. '@' .. hostname .. ':' .. port .. ' failed. ERROR: ' .. obj.err );
+		return
+	end
 
-  db_cache[ obj.hash ] = obj;
-
-  return obj;
+	db_cache[ obj.hash ] = obj;
+	--obj._db:Query("SET NAMES UTF8MB4", function(results) end)
+	return obj;
 end
 pmysql.newdb = pmysql.connect;
 
@@ -99,34 +100,39 @@ function db_mt:disconnect( )
   db_cache[ self ] = nil;
 end
 
-function db_mt:query( sqlstr, cback )
-  return self._db:Query( sqlstr, function( results )
-    if results[1].error then
-      pmysql.log( self.database .. ':' .. self.port .. ' - ' .. results[1].error );
-      if ( query_cache[ sqlstr ] == nil ) then
-        query_cache[ sqlstr ] = { obj = self, cback = cback };
-      elseif ( max_errors ~= nil ) and ( query_cache[ sqlstr ] ~= nil ) and ( query_cache[ sqlstr ].errcount >= max_errors ) then
-        pmysql.log( 'ERROR: Query timeout - ' .. sqlstr );
-        query_cache[ sqlstr ] = nil;
-      elseif ( query_cache[ sqlstr ] ~= nil ) then
-      	query_cache[ sqlstr ].retry = true;
-      end
-    else
-      if cback then cback( results[1].data ); end
-    end
-  end, QUERY_FLAG_ASSOC );
+function db_mt:query( sqlstr, cback, ... )
+	local args = {...}
+
+	return self._db:Query( sqlstr, function( results )
+		for i=1, #results do
+			if results[i].error then
+				pmysql.log( self.database .. ':' .. self.port .. ' - ' .. results[i].error );
+				if ( query_cache[ sqlstr ] == nil ) then
+					query_cache[ sqlstr ] = { obj = self, cback = cback, args = args };
+				elseif ( max_errors ~= nil ) and ( query_cache[ sqlstr ] ~= nil ) and ( query_cache[ sqlstr ].errcount >= max_errors ) then
+					pmysql.log( 'ERROR: Query timeout - ' .. sqlstr );
+					query_cache[ sqlstr ] = nil;
+				elseif ( query_cache[ sqlstr ] ~= nil ) then
+					query_cache[ sqlstr ].retry = true;
+				end
+			else
+				if cback then cback( results[i].data, unpack(args) ); end
+			end
+		end
+	end);
 end
 
-function db_mt:query_ex( sqlstr, options, cback )
-  if options ~= nil then
-    for k, v in ipairs( options ) do
-      options[ k ] = self:escape( v );
-    end
+function db_mt:query_ex( sqlstr, options, cback, ... )
+	local args = {...}
+	if options ~= nil then
+		for k, v in ipairs( options ) do
+			options[ k ] = self:escape( v );
+		end
 
-    sqlstr = sqlstr:gsub( '%%','%%%%' ):gsub( '?', '%%s' );
-    sqlstr = string.format( sqlstr, unpack( options ) );
-  end
-  return self:query( sqlstr, cback );
+		sqlstr = sqlstr:gsub( '%%','%%%%' ):gsub( '?', '%%s' );
+		sqlstr = string.format( sqlstr, unpack( options ) );
+	end
+	return self:query( sqlstr, cback, unpack(args) );
 end
 
 function db_mt:query_sync( sqlstr, options, timeout ) 
@@ -151,7 +157,7 @@ hook.Add('Tick', 'pmysql.Poll', function()
   	if ( v.retry ~= false ) then
 	    v.errcount = ( v.errcount ~= nil ) and ( v.errcount + 1 ) or 2;
 	    v.retry = false;
-	    v.obj:query( k, v.cback );
+	    v.obj:query( k, v.cback, unpack(v.args));
 	end
   end
 end );
